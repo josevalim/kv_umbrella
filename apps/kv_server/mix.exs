@@ -6,7 +6,6 @@ defmodule KVServer.Mixfile do
      version: "0.0.1",
      deps_path: "../../deps",
      lockfile: "../../mix.lock",
-     elixir: "~> 0.14.1-dev",
      deps: deps]
   end
 

@@ -1,17 +1,20 @@
 defmodule KV.Bucket.Supervisor do
   use Supervisor
 
-  def start_link(opts \\ []) do
-    Supervisor.start_link(__MODULE__, :ok, opts)
+  # A simple module attribute that stores the supervisor name
+  @name KV.Bucket.Supervisor
+
+  def start_link() do
+    Supervisor.start_link(__MODULE__, :ok, name: @name)
   end
 
-  def start_bucket(supervisor) do
-    Supervisor.start_child(supervisor, [])
+  def start_bucket do
+    Supervisor.start_child(@name, [])
   end
 
   def init(:ok) do
     children = [
-      worker(KV.Bucket, [], type: :temporary)
+      worker(KV.Bucket, [], restart: :temporary)
     ]
 
     supervise(children, strategy: :simple_one_for_one)

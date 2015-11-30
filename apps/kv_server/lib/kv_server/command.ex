@@ -42,6 +42,8 @@ defmodule KVServer.Command do
   @doc """
   Runs the given command.
   """
+  def run(command)
+
   def run({:create, bucket}) do
     KV.Registry.create(KV.Registry, bucket)
     {:ok, "OK\r\n"}

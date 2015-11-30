@@ -1,6 +1,8 @@
 defmodule KVServer do
   use Application
+  require Logger
 
+  @doc false
   def start(_type, _args) do
     import Supervisor.Spec
 
@@ -13,27 +15,28 @@ defmodule KVServer do
     Supervisor.start_link(children, opts)
   end
 
+  @doc """
+  Starts accepting connections on the given `port`.
+  """
   def accept(port) do
     {:ok, socket} = :gen_tcp.listen(port,
-                      [:binary, packet: :line, active: false])
-    IO.puts "Accepting connections on port #{port}"
+                      [:binary, packet: :line, active: false, reuseaddr: true])
+    Logger.info "Accepting connections on port #{port}"
     loop_acceptor(socket)
   end
 
   defp loop_acceptor(socket) do
     {:ok, client} = :gen_tcp.accept(socket)
-    Task.Supervisor.start_child(KVServer.TaskSupervisor, fn -> serve(client) end)
+    {:ok, pid} = Task.Supervisor.start_child(KVServer.TaskSupervisor, fn -> serve(client) end)
+    :ok = :gen_tcp.controlling_process(client, pid)
     loop_acceptor(socket)
   end
 
   defp serve(socket) do
-    import Pipe
-
     msg =
-      pipe_matching x, {:ok, x},
-        read_line(socket)
-        |> KVServer.Command.parse()
-        |> KVServer.Command.run()
+      with {:ok, data} <- read_line(socket),
+           {:ok, command} <- KVServer.Command.parse(data),
+           do: KVServer.Command.run(command)
 
     write_line(socket, msg)
     serve(socket)
@@ -43,12 +46,29 @@ defmodule KVServer do
     :gen_tcp.recv(socket, 0)
   end
 
-  defp write_line(socket, msg) do
-    :gen_tcp.send(socket, format_msg(msg))
+
+  defp write_line(socket, {:ok, text}) do
+    :gen_tcp.send(socket, text)
   end
 
-  defp format_msg({:ok, text}), do: text
-  defp format_msg({:error, :not_found}), do: "NOT FOUND\r\n"
-  defp format_msg({:error, :unknown_command}), do: "UNKNOWN COMMAND\r\n"
-  defp format_msg({:error, _}), do: "ERROR\r\n"
+  defp write_line(socket, {:error, :unknown_command}) do
+    # Known error. Write to the client.
+    :gen_tcp.send(socket, "UNKNOWN COMMAND\r\n")
+  end
+
+  defp write_line(socket, {:error, :not_found}) do
+    # Known error. Write to the client.
+    :gen_tcp.send(socket, "NOT FOUND\r\n")
+  end
+
+  defp write_line(_socket, {:error, :closed}) do
+    # The connection was closed, exit politely.
+    exit(:shutdown)
+  end
+
+  defp write_line(socket, {:error, error}) do
+    # Unknown error. Write to the client and exit.
+    :gen_tcp.send(socket, "ERROR\r\n")
+    exit(error)
+  end
 end

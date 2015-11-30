@@ -1,22 +1,24 @@
 defmodule KV.Registry do
   use GenServer
 
-  ## Cient API
+  ## Client API
 
   @doc """
-  Starts the registry.
+  Starts the registry with the given `name`.
   """
-  def start_link(table, event_manager, buckets, opts \\ []) do
-    GenServer.start_link(__MODULE__, {table, event_manager, buckets}, opts)
+  def start_link(name) do
+    # 1. Pass the name to GenServer's init
+    GenServer.start_link(__MODULE__, name, name: name)
   end
 
   @doc """
-  Looks up the bucket pid for `name` stored in `table`.
+  Looks up the bucket pid for `name` stored in `server`.
 
-  Returns `{:ok, pid}` in case a bucket exists, `:error` otherwise.
+  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
   """
-  def lookup(table, name) do
-    case :ets.lookup(table, name) do
+  def lookup(server, name) when is_atom(server) do
+    # 2. Lookup is now done directly in ETS, without accessing the server
+    case :ets.lookup(server, name) do
       [{^name, bucket}] -> {:ok, bucket}
       [] -> :error
     end
@@ -29,35 +31,43 @@ defmodule KV.Registry do
     GenServer.call(server, {:create, name})
   end
 
-  ## Server callbacks
-
-  def init({table, events, buckets}) do
-    refs = :ets.foldl(fn {name, pid}, acc ->
-      HashDict.put(acc, Process.monitor(pid), name)
-    end, HashDict.new, table)
-
-    {:ok, %{names: table, refs: refs, events: events, buckets: buckets}}
+  @doc """
+  Stops the registry.
+  """
+  def stop(server) do
+    GenServer.stop(server)
   end
 
-  def handle_call({:create, name}, _from, state) do
-    case lookup(state.names, name) do
+  ## Server callbacks
+
+  def init(table) do
+    # 3. We have replaced the names map by the ETS table
+    names = :ets.new(table, [:named_table, read_concurrency: true])
+    refs  = %{}
+    {:ok, {names, refs}}
+  end
+
+  # 4. The previous handle_call callback for lookup was removed
+
+  def handle_call({:create, name}, _from, {names, refs}) do
+    # 5. Read and write to the ETS table instead of the map
+    case lookup(names, name) do
       {:ok, pid} ->
-        {:reply, pid, state} # Reply with pid
+        {:reply, pid, {names, refs}}
       :error ->
-        {:ok, pid} = KV.Bucket.Supervisor.start_bucket(state.buckets)
+        {:ok, pid} = KV.Bucket.Supervisor.start_bucket()
         ref = Process.monitor(pid)
-        refs = HashDict.put(state.refs, ref, name)
-        :ets.insert(state.names, {name, pid})
-        GenEvent.sync_notify(state.events, {:create, name, pid})
-        {:reply, pid, %{state | refs: refs}} # Reply with pid
+        refs = Map.put(refs, ref, name)
+        :ets.insert(names, {name, pid})
+        {:reply, pid, {names, refs}}
     end
   end
 
-  def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
-    {name, refs} = HashDict.pop(state.refs, ref)
-    :ets.delete(state.names, name)
-    GenEvent.sync_notify(state.events, {:exit, name, pid})
-    {:noreply, %{state | refs: refs}}
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, {names, refs}) do
+    # 6. Delete from the ETS table instead of the map
+    {name, refs} = Map.pop(refs, ref)
+    :ets.delete(names, name)
+    {:noreply, {names, refs}}
   end
 
   def handle_info(_msg, state) do

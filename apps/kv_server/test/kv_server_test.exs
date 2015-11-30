@@ -1,12 +1,11 @@
 defmodule KVServerTest do
   use ExUnit.Case
 
+  @moduletag :capture_log
+
   setup do
-    :error_logger.tty(false)
-    :application.stop(:kv)
-    :ok = :application.start(:kv)
-    :error_logger.tty(true)
-    :ok
+    Application.stop(:kv)
+    :ok = Application.start(:kv)
   end
 
   setup do

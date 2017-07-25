@@ -4,9 +4,9 @@ defmodule KV.RouterTest do
   @tag :distributed
   test "route requests across nodes" do
     assert KV.Router.route("hello", Kernel, :node, []) ==
-           :"foo@macbook-3"
+           :"foo@computer-name"
     assert KV.Router.route("world", Kernel, :node, []) ==
-           :"bar@macbook-3"
+           :"bar@computer-name"
   end
 
   test "raises on unknown entries" do

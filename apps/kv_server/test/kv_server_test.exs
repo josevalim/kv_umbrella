@@ -11,7 +11,7 @@ defmodule KVServerTest do
   setup do
     opts = [:binary, packet: :line, active: false]
     {:ok, socket} = :gen_tcp.connect('localhost', 4040, opts)
-    {:ok, socket: socket}
+    %{socket: socket}
   end
 
   test "server interaction", %{socket: socket} do

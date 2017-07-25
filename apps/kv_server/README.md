@@ -4,17 +4,18 @@
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
+If [available in Hex](https://hex.pm/docs/publish), the package can be installed
+by adding `kv_server` to your list of dependencies in `mix.exs`:
 
-  1. Add kv_server to your list of dependencies in `mix.exs`:
+```elixir
+def deps do
+  [
+    {:kv_server, "~> 0.1.0"}
+  ]
+end
+```
 
-        def deps do
-          [{:kv_server, "~> 0.0.1"}]
-        end
-
-  2. Ensure kv_server is started before your application:
-
-        def application do
-          [applications: [:kv_server]]
-        end
+Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
+and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
+be found at [https://hexdocs.pm/kv_server](https://hexdocs.pm/kv_server).
 

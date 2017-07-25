@@ -1,8 +1,10 @@
 defmodule KV.Bucket do
+  use Agent, restart: :temporary
+
   @doc """
   Starts a new bucket.
   """
-  def start_link do
+  def start_link(_) do
     Agent.start_link(fn -> %{} end)
   end
 

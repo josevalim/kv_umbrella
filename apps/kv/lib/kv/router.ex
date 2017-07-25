@@ -7,9 +7,9 @@ defmodule KV.Router do
     # Get the first byte of the binary
     first = :binary.first(bucket)
 
-    # Try to find an entry in the table or raise
+    # Try to find an entry in the table() or raise
     entry =
-      Enum.find(table, fn {enum, node} ->
+      Enum.find(table(), fn {enum, _node} ->
         first in enum
       end) || no_entry_error(bucket)
 
@@ -24,15 +24,13 @@ defmodule KV.Router do
   end
 
   defp no_entry_error(bucket) do
-    raise "could not find entry for #{inspect bucket} in table #{inspect table}"
+    raise "could not find entry for #{inspect bucket} in table #{inspect table()}"
   end
 
   @doc """
   The routing table.
   """
   def table do
-    # Replace computer-name with your local machine name.
-    [{?a..?m, :"foo@macbook-3"},
-     {?n..?z, :"bar@macbook-3"}]
+    Application.fetch_env!(:kv, :routing_table)
   end
 end

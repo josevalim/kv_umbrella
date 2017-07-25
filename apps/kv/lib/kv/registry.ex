@@ -4,11 +4,14 @@ defmodule KV.Registry do
   ## Client API
 
   @doc """
-  Starts the registry with the given `name`.
+  Starts the registry with the given options.
+
+  `:name` is always required.
   """
-  def start_link(name) do
+  def start_link(opts) do
     # 1. Pass the name to GenServer's init
-    GenServer.start_link(__MODULE__, name, name: name)
+    server = Keyword.fetch!(opts, :name)
+    GenServer.start_link(__MODULE__, server, opts)
   end
 
   @doc """
@@ -16,10 +19,10 @@ defmodule KV.Registry do
 
   Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
   """
-  def lookup(server, name) when is_atom(server) do
+  def lookup(server, name) do
     # 2. Lookup is now done directly in ETS, without accessing the server
     case :ets.lookup(server, name) do
-      [{^name, bucket}] -> {:ok, bucket}
+      [{^name, pid}] -> {:ok, pid}
       [] -> :error
     end
   end
@@ -29,13 +32,6 @@ defmodule KV.Registry do
   """
   def create(server, name) do
     GenServer.call(server, {:create, name})
-  end
-
-  @doc """
-  Stops the registry.
-  """
-  def stop(server) do
-    GenServer.stop(server)
   end
 
   ## Server callbacks
@@ -55,7 +51,7 @@ defmodule KV.Registry do
       {:ok, pid} ->
         {:reply, pid, {names, refs}}
       :error ->
-        {:ok, pid} = KV.Bucket.Supervisor.start_bucket()
+        {:ok, pid} = KV.BucketSupervisor.start_bucket()
         ref = Process.monitor(pid)
         refs = Map.put(refs, ref, name)
         :ets.insert(names, {name, pid})

@@ -2,7 +2,7 @@ defmodule KV.RegistryTest do
   use ExUnit.Case, async: true
 
   setup context do
-    {:ok, _} = start_supervised({KV.Registry, name: context.test})
+    _ = start_supervised!({KV.Registry, name: context.test})
     %{registry: context.test}
   end
 

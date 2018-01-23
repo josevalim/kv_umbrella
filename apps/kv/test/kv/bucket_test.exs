@@ -2,7 +2,7 @@ defmodule KV.BucketTest do
   use ExUnit.Case, async: true
 
   setup do
-    {:ok, bucket} = start_supervised(KV.Bucket)
+    bucket = start_supervised!(KV.Bucket)
     %{bucket: bucket}
   end
 

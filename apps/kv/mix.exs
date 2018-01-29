@@ -9,7 +9,7 @@ defmodule KV.Mixfile do
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
       lockfile: "../../mix.lock",
-      elixir: "~> 1.6",
+      elixir: "~> 1.6.1 or ~> 1.7",
       start_permanent: Mix.env == :prod,
       deps: deps()
     ]

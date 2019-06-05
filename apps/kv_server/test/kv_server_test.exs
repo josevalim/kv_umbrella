@@ -14,6 +14,12 @@ defmodule KVServerTest do
     %{socket: socket}
   end
 
+  setup do
+    current = Application.get_env(:kv, :routing_table)
+    Application.put_env(:kv, :routing_table, [{?a..?z, node()}])
+    on_exit fn -> Application.put_env(:kv, :routing_table, current) end
+  end
+
   test "server interaction", %{socket: socket} do
     assert send_and_recv(socket, "UNKNOWN shopping\r\n") ==
            "UNKNOWN COMMAND\r\n"

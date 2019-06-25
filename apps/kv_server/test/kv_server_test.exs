@@ -1,5 +1,5 @@
 defmodule KVServerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   @moduletag :capture_log
 
@@ -12,12 +12,6 @@ defmodule KVServerTest do
     opts = [:binary, packet: :line, active: false]
     {:ok, socket} = :gen_tcp.connect('localhost', 4040, opts)
     %{socket: socket}
-  end
-
-  setup do
-    current = Application.get_env(:kv, :routing_table)
-    Application.put_env(:kv, :routing_table, [{?a..?z, node()}])
-    on_exit fn -> Application.put_env(:kv, :routing_table, current) end
   end
 
   test "server interaction", %{socket: socket} do
